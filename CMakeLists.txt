@@ -70,7 +70,6 @@ find_package(interactive_markers REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(ndt_omp REQUIRED)
 find_package(fast_gicp REQUIRED)
-#find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 # ROS2 python depencencies
 find_package(ament_cmake_python REQUIRED)
