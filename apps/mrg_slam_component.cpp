@@ -66,6 +66,8 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
 
 
 namespace mrg_slam {
@@ -74,7 +76,9 @@ public:
     typedef pcl::PointXYZI                                                                                          PointT;
     typedef message_filters::sync_policies::ApproximateTime<nav_msgs::msg::Odometry, sensor_msgs::msg::PointCloud2> ApproxSyncPolicy;
 
-    MrgSlamComponent( const rclcpp::NodeOptions &options ) : Node( "mrg_slam_component", options )
+    MrgSlamComponent( const rclcpp::NodeOptions &options ) :
+        Node( "mrg_slam_component", options ),
+        diag_updater( this )
     {
         // Since we need to pass the shared pointer from this node to other classes and functions, we start a one-shot timer to call the
         // onInit() method
@@ -251,6 +255,20 @@ public:
         slam_status_msg.initialized = true;
         slam_status_msg.robot_name  = own_name;
         slam_status_publisher->publish( slam_status_msg );
+
+        // Diagnostics
+        diag_updater.setHardwareID("none");
+
+        diagnostic_updater::FrequencyStatusParam freq_param(&this->min_freq, &this->max_freq);
+        diagnostic_updater::TimeStampStatusParam timestamp_param(1e-100, 1e100);
+
+        odom2map_diag_pub                    = std::make_shared<diagnostic_updater::DiagnosedPublisher<geometry_msgs::msg::TransformStamped>>(odom2map_pub, diag_updater, freq_param, timestamp_param);
+        map_points_diag_pub                  = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(map_points_pub, diag_updater, freq_param, timestamp_param);
+        // read_until_diag_pub                  = std::make_shared<diagnostic_updater::DiagnosedPublisher<std_msgs::msg::Header>>(read_until_pub, diag_updater, freq_param, timestamp_param);
+        odom_broadcast_diag_pub              = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithName>>(odom_broadcast_pub, diag_updater, freq_param, timestamp_param);
+        slam_pose_broadcast_diag_pub         = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithName>>(slam_pose_broadcast_pub, diag_updater, freq_param, timestamp_param);
+        others_poses_diag_pub                = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithNameArray>>(others_poses_pub, diag_updater, freq_param, timestamp_param);
+        other_robots_removed_points_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(other_robots_removed_points_pub, diag_updater, freq_param, timestamp_param);
 
         // Print the all parameters declared in this node so far
         print_ros2_parameters( this->get_node_parameters_interface(), this->get_logger() );
@@ -467,7 +485,7 @@ private:
                 pcl::toROSMsg( *removed_cloud, cloud_msg_removed );
                 cloud_msg_removed.header.stamp    = cloud_msg->header.stamp;
                 cloud_msg_removed.header.frame_id = base_frame_id;
-                other_robots_removed_points_pub->publish( cloud_msg_removed );
+                other_robots_removed_points_diag_pub->publish( cloud_msg_removed );
             }
 
             // create keyframe and add it to the queue
@@ -480,7 +498,7 @@ private:
         pose_msg.robot_name = own_name;
         pose_msg.pose       = odom_msg->pose.pose;
         pose_msg.accum_dist = accum_d;
-        odom_broadcast_pub->publish( pose_msg );
+        odom_broadcast_diag_pub->publish( pose_msg );
     }
 
     void set_init_pose()
@@ -525,7 +543,7 @@ private:
         slam_pose_msg.pose            = isometry2pose( kf->node->estimate() );
         slam_pose_msg.robot_name      = own_name;
         slam_pose_msg.accum_dist      = kf->accum_distance;
-        slam_pose_broadcast_pub->publish( slam_pose_msg );
+        slam_pose_broadcast_diag_pub->publish( slam_pose_msg );
     }
 
     void slam_pose_broadcast_callback( mrg_slam_msgs::msg::PoseWithName::ConstSharedPtr slam_pose_msg )
@@ -682,7 +700,7 @@ private:
 
         // publish this information
         if( !pose_array_msg.poses.empty() ) {
-            others_poses_pub->publish( pose_array_msg );
+            others_poses_diag_pub->publish( pose_array_msg );
         }
     }
 
@@ -749,7 +767,7 @@ private:
             return;
         }
 
-        map_points_pub->publish( *cloud_msg );
+        map_points_diag_pub->publish( *cloud_msg );
     }
 
     /**
@@ -966,7 +984,7 @@ private:
         if( odom2map_pub->get_subscription_count() ) {
             geometry_msgs::msg::TransformStamped ts = matrix2transform( prev_robot_keyframe->stamp, trans.matrix().cast<float>(),
                                                                         map_frame_id, odom_frame_id );
-            odom2map_pub->publish( ts );
+            odom2map_diag_pub->publish( ts );
         }
 
         if( markers_pub.getNumSubscribers() ) {
@@ -1498,6 +1516,19 @@ private:
     std::shared_ptr<GraphDatabase>   graph_database;
     std::unique_ptr<LoopDetector>    loop_detector;
     std::unique_ptr<KeyframeUpdater> keyframe_updater;
+
+    // Diagnostics
+    diagnostic_updater::Updater diag_updater;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<geometry_msgs::msg::TransformStamped>> odom2map_diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>> map_points_diag_pub;
+    // std::shared_ptr<diagnostic_updater::DiagnosedPublisher<std_msgs::msg::Header>> read_until_diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithName>> odom_broadcast_diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithName>> slam_pose_broadcast_diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithNameArray>> others_poses_diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>> other_robots_removed_points_diag_pub;
+    double min_freq = 0.001;
+    double max_freq = 100.0;
+
 };
 
 }  // namespace mrg_slam

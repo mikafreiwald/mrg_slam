@@ -113,6 +113,7 @@ ament_target_dependencies(floor_detection_component
   mrg_slam_msgs
   ndt_omp
   fast_gicp
+  diagnostic_updater
 )
 # Register the component as part of mrg_slam (project) ComponentManager
 rclcpp_components_register_nodes(floor_detection_component "mrg_slam::FloorDetectionComponent")

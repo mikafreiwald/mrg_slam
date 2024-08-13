@@ -249,6 +249,14 @@ analyzers:
       type: diagnostic_aggregator/GenericAnalyzer
       path: Prefiltering
       startswith: [ 'prefiltering_component' ]
+    floor_detection:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: FloorDetection
+      startswith: [ 'floor_detection_component' ]
+    mrg_slam:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: MRG-SLAM
+      startswith: [ 'mrg_slam_component' ]
     atlas:
       type: diagnostic_aggregator/GenericAnalyzer
       path: Atlas

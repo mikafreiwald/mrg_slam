@@ -16,6 +16,8 @@
 #include <pcl/search/impl/search.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
 
 namespace mrg_slam {
 
@@ -24,7 +26,9 @@ public:
     typedef pcl::PointXYZI PointT;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    FloorDetectionComponent( const rclcpp::NodeOptions& options ) : Node( "floor_detection_component", options )
+    FloorDetectionComponent( const rclcpp::NodeOptions& options ) :
+        Node( "floor_detection_component", options ),
+        diag_updater( this )
     {
         RCLCPP_INFO( this->get_logger(), "Initializing floor_detection_component ..." );
 
@@ -40,6 +44,15 @@ public:
         floor_filtered_pub = this->create_publisher<sensor_msgs::msg::PointCloud2>( "/floor_detection/floor_filtered_points",
                                                                                     rclcpp::QoS( 32 ) );
         floor_points_pub   = this->create_publisher<sensor_msgs::msg::PointCloud2>( "/floor_detection/floor_points", rclcpp::QoS( 32 ) );
+
+        diag_updater.setHardwareID("none");
+
+        diagnostic_updater::FrequencyStatusParam freq_param(&this->min_freq, &this->max_freq);
+        diagnostic_updater::TimeStampStatusParam timestamp_param(1e-100, 1e100);
+
+        floor_diag_pub          = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::FloorCoeffs>>(floor_pub, diag_updater, freq_param, timestamp_param);
+        // floor_filtered_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(floor_filtered_pub, diag_updater, freq_param, timestamp_param);
+        // floor_points_diag_pub   = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(floor_points_pub, diag_updater, freq_param, timestamp_param);
 
         // Optionally print the all parameters declared in this node so far
         print_ros2_parameters( this->get_node_parameters_interface(), this->get_logger() );
@@ -95,7 +108,7 @@ private:
             }
         }
 
-        floor_pub->publish( coeffs );
+        floor_diag_pub->publish( coeffs );
 
         // for offline estimation, not sure why a ptr is created in ROS1
         std_msgs::msg::Header read_until;
@@ -273,6 +286,14 @@ private:
 
     bool   use_normal_filtering;
     double normal_filter_thresh;
+
+    // Diagnostics
+    diagnostic_updater::Updater diag_updater;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::FloorCoeffs>> floor_diag_pub;
+    //std::shared_ptr<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>> floor_filtered_diag_pub;
+    //std::shared_ptr<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>> floor_points_diag_pub;
+    double min_freq = 0.001;
+    double max_freq = 100.0;
 };
 
 }  // namespace mrg_slam
