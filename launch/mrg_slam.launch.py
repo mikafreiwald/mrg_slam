@@ -89,6 +89,7 @@ def launch_setup(context, *args, **kwargs):
         scan_matching_odometry_params = config_params['scan_matching_odometry_component']['ros__parameters']
         floor_detection_params = config_params['floor_detection_component']['ros__parameters']
         mrg_slam_params = config_params['mrg_slam_component']['ros__parameters']
+        diagnostic_aggregator_params = config_params['analyzers']['ros__parameters']
 
     # Overwrite the parameters from the yaml file with the ones from the cli
     shared_params = overwrite_yaml_params_from_cli(shared_params, context.launch_configurations)
@@ -99,6 +100,7 @@ def launch_setup(context, *args, **kwargs):
     scan_matching_odometry_params = overwrite_yaml_params_from_cli(scan_matching_odometry_params, context.launch_configurations)
     floor_detection_params = overwrite_yaml_params_from_cli(floor_detection_params, context.launch_configurations)
     mrg_slam_params = overwrite_yaml_params_from_cli(mrg_slam_params, context.launch_configurations)
+    diagnostic_aggregator_params = overwrite_yaml_params_from_cli(diagnostic_aggregator_params, context.launch_configurations)
 
     model_namespace = shared_params['model_namespace']
 
@@ -111,6 +113,7 @@ def launch_setup(context, *args, **kwargs):
     print_yaml_params(scan_matching_odometry_params, 'scan_matching_odometry_params')
     print_yaml_params(floor_detection_params, 'floor_detection_params')
     print_yaml_params(mrg_slam_params, 'mrg_slam_params')
+    print_yaml_params(diagnostic_aggregator_params, 'diagnostic_aggregator_params')
 
     # Create the static transform publisher node between the base and the lidar frame
     frame_id = static_transform_params['base_frame_id']
@@ -374,6 +377,14 @@ def launch_setup(context, *args, **kwargs):
             extra_arguments=[{'use_intra_process_comms': True}]
         )
 
+    # diagnostic aggregator component
+    diagnostic_aggregator = Node(
+        package='diagnostic_aggregator',
+        executable='aggregator_node',
+        output='screen',
+        parameters=[diagnostic_aggregator_params]
+    )
+
     composable_nodes = []
     if velodyne_params['enable_velodyne']:
         composable_nodes.append(velodyne_driver_node)
@@ -404,6 +415,7 @@ def launch_setup(context, *args, **kwargs):
     launch_description_list.append(load_composable_nodes)
     if scan_matching_odometry_params['enable_scan_matching_odometry'] and scan_matching_odometry_params['enable_odom_to_file']:
         launch_description_list.append(odom_to_file_node)
+    launch_description_list.append(diagnostic_aggregator)
     # Return nodes to our OpaqueFunction
     return launch_description_list
 

@@ -241,3 +241,19 @@ mrg_slam_component:
     result_dir: ""
     # remappings are handled in the python respective launch file
 
+# diagnostics aggregator component parameters
+analyzers:
+  ros__parameters:
+    path: Aggregation
+    prefiltering:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: Prefiltering
+      startswith: [ 'prefiltering_component' ]
+    atlas:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: Atlas
+      contains: [ '/atlas' ]
+    bestla:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: Bestla
+      contains: [ '/bestla' ]

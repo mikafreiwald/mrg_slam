@@ -70,6 +70,8 @@ find_package(interactive_markers REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(ndt_omp REQUIRED)
 find_package(fast_gicp REQUIRED)
+#find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 # ROS2 python depencencies
 find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)
@@ -184,6 +186,7 @@ ament_target_dependencies(prefiltering_component
   nav_msgs
   ndt_omp
   fast_gicp
+  diagnostic_updater
 )
 # Register the component as part of mrg_slam (project) ComponentManager
 rclcpp_components_register_nodes(prefiltering_component "mrg_slam::PrefilteringComponent")
@@ -250,6 +253,7 @@ ament_target_dependencies(mrg_slam_component
   mrg_slam_msgs
   fast_gicp
   ndt_omp
+  diagnostic_updater
 )
 # Register the component as part of mrg_slam (project) ComponentManager
 rclcpp_components_register_nodes(mrg_slam_component "mrg_slam::MrgSlamComponent")

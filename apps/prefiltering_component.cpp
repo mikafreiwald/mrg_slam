@@ -12,6 +12,8 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <mrg_slam/ros_utils.hpp>
 #include <pcl_ros/transforms.hpp>
@@ -27,7 +29,9 @@ public:
     typedef pcl::PointXYZI PointT;
 
     // We need to pass NodeOptions in ROS2 to register a component
-    PrefilteringComponent( const rclcpp::NodeOptions& options ) : Node( "prefiltering_component", options )
+    PrefilteringComponent( const rclcpp::NodeOptions& options ) :
+        Node( "prefiltering_component", options ),
+        diag_updater( this /* , 1.0 */ )
     {
         RCLCPP_INFO( this->get_logger(), "Initializing prefiltering_component..." );
 
@@ -80,6 +84,18 @@ public:
         points_pub  = this->create_publisher<sensor_msgs::msg::PointCloud2>( "/prefiltering/filtered_points", rclcpp::QoS( 32 ) );
         colored_pub = this->create_publisher<sensor_msgs::msg::PointCloud2>( "/prefiltering/colored_points", rclcpp::QoS( 32 ) );
 
+        // setup diagnostics updater
+        diag_updater.setHardwareID("none");
+        diag_updater.add(std::string(this->get_namespace()) + "/counter", this, &PrefilteringComponent::diag_count_callback);
+
+        diagnostic_updater::FrequencyStatusParam freq(&this->min_freq, &this->max_freq);
+        diagnostic_updater::TimeStampStatusParam stamp(1e-100, 1e100);
+
+        points_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(points_pub, diag_updater, freq, stamp);
+
+        // manually publish
+        diag_pub = this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>( "/diagnostics", rclcpp::QoS( 32 ) );
+
         // setup transform listener
         tf_buffer   = std::make_unique<tf2_ros::Buffer>( this->get_clock() );
         tf_listener = std::make_shared<tf2_ros::TransformListener>( *tf_buffer );
@@ -116,6 +132,12 @@ private:
 
     void cloud_callback( sensor_msgs::msg::PointCloud2::ConstSharedPtr src_cloud_ros )
     {
+        cloud_callback_count++;
+
+        if (cloud_callback_count == 1) {
+            publish_diagnostics();
+        }
+
         // Convert to pcl pointcloud from ros PointCloud2
         pcl::PointCloud<PointT>::Ptr src_cloud = std::make_shared<pcl::PointCloud<PointT>>();
         pcl::fromROSMsg( *src_cloud_ros, *src_cloud );
@@ -144,6 +166,7 @@ private:
             transformed->header.frame_id = base_link_frame;
             transformed->header.stamp    = src_cloud->header.stamp;
             src_cloud                    = transformed;
+            points_transform_count++;
         }
 
         pcl::PointCloud<PointT>::ConstPtr filtered = distance_filter( src_cloud );
@@ -152,7 +175,43 @@ private:
         sensor_msgs::msg::PointCloud2 filtered_ros;
         pcl::toROSMsg( *filtered, filtered_ros );
 
-        points_pub->publish( filtered_ros );
+        // points_pub->publish( filtered_ros );
+        points_publish_count++;
+        points_diag_pub->publish( filtered_ros );
+    }
+
+    void diag_count_callback(diagnostic_updater::DiagnosticStatusWrapper &stat)
+    {
+        diag_callback_count++;
+        stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Counting");
+        stat.add("Diag Callback Count", diag_callback_count);
+        stat.add("Cloud Callback Count", cloud_callback_count);
+        stat.add("Points Publish Count", points_publish_count);
+        stat.add("Points Transform Count", points_transform_count);
+    }
+
+    void publish_diagnostics()
+    {
+        // Create a DiagnosticStatus message
+        diagnostic_msgs::msg::DiagnosticStatus status;
+        status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+        status.name = "prefiltering_component: Cloud Callback Listener";
+        status.message = "Cloud Callback called";
+        status.hardware_id = "none";
+
+        // Add some key-value pairs
+        // diagnostic_msgs::msg::KeyValue kv;
+        // kv.key = "Data Rate";
+        // kv.value = "100"; // Example metric
+        // status.values.push_back(kv);
+
+        // Create a DiagnosticArray message and add the status to it
+        diagnostic_msgs::msg::DiagnosticArray diag_array;
+        diag_array.status.push_back(status);
+        diag_array.header.stamp = this->get_clock()->now();
+
+        // Publish the diagnostic array
+        diag_pub->publish(diag_array);
     }
 
     pcl::PointCloud<PointT>::ConstPtr downsample( const pcl::PointCloud<PointT>::ConstPtr& cloud ) const
@@ -303,6 +362,17 @@ private:
 
     pcl::Filter<PointT>::Ptr downsample_filter;
     pcl::Filter<PointT>::Ptr outlier_removal_filter;
+
+    // Diagnostics
+    diagnostic_updater::Updater diag_updater;
+    rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>> points_diag_pub;
+    double min_freq = 0.001;
+    double max_freq = 100.0;
+    unsigned long long points_publish_count = 0;
+    unsigned long long points_transform_count = 0;
+    unsigned long long cloud_callback_count = 0;
+    unsigned long long diag_callback_count = 0;
 };
 
 }  // namespace mrg_slam
