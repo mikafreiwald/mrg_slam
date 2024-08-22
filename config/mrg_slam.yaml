@@ -257,6 +257,10 @@ analyzers:
       type: diagnostic_aggregator/GenericAnalyzer
       path: MRG-SLAM
       startswith: [ 'mrg_slam_component' ]
+    scan_matching_odometry:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: Scan-Matching
+      startswith: [ 'scan_matching_odometry_component' ]
     atlas:
       type: diagnostic_aggregator/GenericAnalyzer
       path: Atlas

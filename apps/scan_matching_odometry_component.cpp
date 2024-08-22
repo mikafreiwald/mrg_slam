@@ -19,6 +19,8 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
 
 namespace mrg_slam {
 
@@ -28,7 +30,9 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     // We need to pass NodeOptions in ROS2 to register a component
-    ScanMatchingOdometryComponent( const rclcpp::NodeOptions& options ) : Node( "scan_matching_odometry_component", options )
+    ScanMatchingOdometryComponent( const rclcpp::NodeOptions& options ) :
+        Node( "scan_matching_odometry_component", options ),
+        diag_updater(this)
     {
         RCLCPP_INFO( this->get_logger(), "Initializing scan_matching_odometry_component..." );
 
@@ -88,6 +92,18 @@ public:
         // Initialize the transform listener
         tf_buffer   = std::make_unique<tf2_ros::Buffer>( this->get_clock() );
         tf_listener = std::make_shared<tf2_ros::TransformListener>( *tf_buffer );
+
+        // Diagnostics
+        diag_updater.setHardwareID("none");
+
+        diagnostic_updater::FrequencyStatusParam freq_param(&this->min_freq, &this->max_freq);
+        diagnostic_updater::TimeStampStatusParam timestamp_param(-10, 10);
+
+        // read_until_diag_pub     = std::make_shared<diagnostic_updater::DiagnosedPublisher<std_msgs::msg::Header>>(read_until_pub, diag_updater, freq_param, timestamp_param);
+        odom_diag_pub           = std::make_shared<diagnostic_updater::DiagnosedPublisher<nav_msgs::msg::Odometry>>(odom_pub, diag_updater, freq_param, timestamp_param);
+        trans_diag_pub          = std::make_shared<diagnostic_updater::DiagnosedPublisher<geometry_msgs::msg::TransformStamped>>(trans_pub, diag_updater, freq_param, timestamp_param);
+        status_diag_pub         = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::ScanMatchingStatus>>(status_pub, diag_updater, freq_param, timestamp_param);
+        aligned_points_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(aligned_points_pub, diag_updater, freq_param, timestamp_param);
 
         // Optionally print the all parameters declared in this node so far
         print_ros2_parameters( this->get_node_parameters_interface(), this->get_logger() );
@@ -337,7 +353,7 @@ private:
             aligned->header.frame_id = odom_frame_id;
             sensor_msgs::msg::PointCloud2 aligned_ros2;
             pcl::toROSMsg( *aligned, aligned_ros2 );
-            aligned_points_pub->publish( aligned_ros2 );
+            aligned_points_diag_pub->publish( aligned_ros2 );
         }
 
         return odom;
@@ -352,7 +368,7 @@ private:
     {
         // publish transform stamped for IMU integration
         geometry_msgs::msg::TransformStamped odom_trans = matrix2transform( stamp, pose, odom_frame_id, base_frame_id );
-        trans_pub->publish( odom_trans );
+        trans_diag_pub->publish( odom_trans );
 
         // broadcast the transform over tf
         odom_broadcaster->sendTransform( odom_trans );
@@ -373,7 +389,7 @@ private:
         odom.twist.twist.angular.z = 0.0;
 
         // TODO transform odometry into correct frame for displaying it correctly in rviz?
-        odom_pub->publish( odom );
+        odom_diag_pub->publish( odom );
     }
 
 
@@ -419,7 +435,7 @@ private:
             status.prediction_errors[0] = isometry2pose( error.cast<double>() );
         }
 
-        status_pub->publish( status );
+        status_diag_pub->publish( status );
     }
 
 
@@ -477,6 +493,16 @@ private:
     std::string         result_dir;
     std::vector<double> registration_times;
     std::vector<int>    cloud_sizes;  // for debugging
+
+    // Diagnostics
+    diagnostic_updater::Updater diag_updater;
+    // std::shared_ptr<diagnostic_updater::DiagnosedPublisher<std_msgs::msg::Header>> read_until_diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<nav_msgs::msg::Odometry>> odom_diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<geometry_msgs::msg::TransformStamped>> trans_diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::ScanMatchingStatus>> status_diag_pub;
+    std::shared_ptr<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>> aligned_points_diag_pub;
+    double min_freq = 0.001;
+    double max_freq = 100.0;
 };
 
 }  // namespace mrg_slam

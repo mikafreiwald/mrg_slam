@@ -151,6 +151,7 @@ ament_target_dependencies(scan_matching_odometry_component
   mrg_slam_msgs
   ndt_omp
   fast_gicp
+  diagnostic_updater
 )
 # Register the component as part of mrg_slam (project) ComponentManager
 rclcpp_components_register_nodes(scan_matching_odometry_component "mrg_slam::ScanMatchingOdometryComponent")
