@@ -48,11 +48,11 @@ public:
         diag_updater.setHardwareID("none");
 
         diagnostic_updater::FrequencyStatusParam freq_param(&this->min_freq, &this->max_freq);
-        diagnostic_updater::TimeStampStatusParam timestamp_param(1e-100, 1e100);
+        diagnostic_updater::TimeStampStatusParam timestamp_param(-10, 10);
 
-        floor_diag_pub          = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::FloorCoeffs>>(floor_pub, diag_updater, freq_param, timestamp_param);
-        // floor_filtered_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(floor_filtered_pub, diag_updater, freq_param, timestamp_param);
-        // floor_points_diag_pub   = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(floor_points_pub, diag_updater, freq_param, timestamp_param);
+        floor_diag_pub          = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::FloorCoeffs>>(floor_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        // floor_filtered_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(floor_filtered_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        // floor_points_diag_pub   = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(floor_points_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
 
         // Optionally print the all parameters declared in this node so far
         print_ros2_parameters( this->get_node_parameters_interface(), this->get_logger() );

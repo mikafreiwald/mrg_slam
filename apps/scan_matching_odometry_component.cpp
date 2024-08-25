@@ -99,11 +99,11 @@ public:
         diagnostic_updater::FrequencyStatusParam freq_param(&this->min_freq, &this->max_freq);
         diagnostic_updater::TimeStampStatusParam timestamp_param(-10, 10);
 
-        // read_until_diag_pub     = std::make_shared<diagnostic_updater::DiagnosedPublisher<std_msgs::msg::Header>>(read_until_pub, diag_updater, freq_param, timestamp_param);
-        odom_diag_pub           = std::make_shared<diagnostic_updater::DiagnosedPublisher<nav_msgs::msg::Odometry>>(odom_pub, diag_updater, freq_param, timestamp_param);
-        trans_diag_pub          = std::make_shared<diagnostic_updater::DiagnosedPublisher<geometry_msgs::msg::TransformStamped>>(trans_pub, diag_updater, freq_param, timestamp_param);
-        status_diag_pub         = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::ScanMatchingStatus>>(status_pub, diag_updater, freq_param, timestamp_param);
-        aligned_points_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(aligned_points_pub, diag_updater, freq_param, timestamp_param);
+        // read_until_diag_pub     = std::make_shared<diagnostic_updater::DiagnosedPublisher<std_msgs::msg::Header>>(read_until_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        odom_diag_pub           = std::make_shared<diagnostic_updater::DiagnosedPublisher<nav_msgs::msg::Odometry>>(odom_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        trans_diag_pub          = std::make_shared<diagnostic_updater::DiagnosedPublisher<geometry_msgs::msg::TransformStamped>>(trans_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        status_diag_pub         = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::ScanMatchingStatus>>(status_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        aligned_points_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(aligned_points_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
 
         // Optionally print the all parameters declared in this node so far
         print_ros2_parameters( this->get_node_parameters_interface(), this->get_logger() );

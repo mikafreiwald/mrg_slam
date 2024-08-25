@@ -260,15 +260,15 @@ public:
         diag_updater.setHardwareID("none");
 
         diagnostic_updater::FrequencyStatusParam freq_param(&this->min_freq, &this->max_freq);
-        diagnostic_updater::TimeStampStatusParam timestamp_param(1e-100, 1e100);
+        diagnostic_updater::TimeStampStatusParam timestamp_param(-10, 10);
 
-        odom2map_diag_pub                    = std::make_shared<diagnostic_updater::DiagnosedPublisher<geometry_msgs::msg::TransformStamped>>(odom2map_pub, diag_updater, freq_param, timestamp_param);
-        map_points_diag_pub                  = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(map_points_pub, diag_updater, freq_param, timestamp_param);
-        // read_until_diag_pub                  = std::make_shared<diagnostic_updater::DiagnosedPublisher<std_msgs::msg::Header>>(read_until_pub, diag_updater, freq_param, timestamp_param);
-        odom_broadcast_diag_pub              = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithName>>(odom_broadcast_pub, diag_updater, freq_param, timestamp_param);
-        slam_pose_broadcast_diag_pub         = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithName>>(slam_pose_broadcast_pub, diag_updater, freq_param, timestamp_param);
-        others_poses_diag_pub                = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithNameArray>>(others_poses_pub, diag_updater, freq_param, timestamp_param);
-        other_robots_removed_points_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(other_robots_removed_points_pub, diag_updater, freq_param, timestamp_param);
+        odom2map_diag_pub                    = std::make_shared<diagnostic_updater::DiagnosedPublisher<geometry_msgs::msg::TransformStamped>>(odom2map_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        map_points_diag_pub                  = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(map_points_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        // read_until_diag_pub                  = std::make_shared<diagnostic_updater::DiagnosedPublisher<std_msgs::msg::Header>>(read_until_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        odom_broadcast_diag_pub              = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithName>>(odom_broadcast_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        slam_pose_broadcast_diag_pub         = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithName>>(slam_pose_broadcast_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        others_poses_diag_pub                = std::make_shared<diagnostic_updater::DiagnosedPublisher<mrg_slam_msgs::msg::PoseWithNameArray>>(others_poses_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
+        other_robots_removed_points_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(other_robots_removed_points_pub, diag_updater, freq_param, timestamp_param, this->get_clock());
 
         // Print the all parameters declared in this node so far
         print_ros2_parameters( this->get_node_parameters_interface(), this->get_logger() );

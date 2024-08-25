@@ -89,9 +89,9 @@ public:
         diag_updater.add(std::string(this->get_namespace()) + "/counter", this, &PrefilteringComponent::diag_count_callback);
 
         diagnostic_updater::FrequencyStatusParam freq(&this->min_freq, &this->max_freq);
-        diagnostic_updater::TimeStampStatusParam stamp(1e-100, 1e100);
+        diagnostic_updater::TimeStampStatusParam timestamp_param(-10, 10);
 
-        points_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(points_pub, diag_updater, freq, stamp);
+        points_diag_pub = std::make_shared<diagnostic_updater::DiagnosedPublisher<sensor_msgs::msg::PointCloud2>>(points_pub, diag_updater, freq, timestamp_param, this->get_clock());
 
         // manually publish
         diag_pub = this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>( "/diagnostics", rclcpp::QoS( 32 ) );
